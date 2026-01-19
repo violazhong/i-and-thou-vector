@@ -2,7 +2,7 @@
 title: ""
 ---
 
-# I and Thou Persona Vector
+# I and Thou: Turning the Mirror on the Machine
 
 ## TL;DR
 
