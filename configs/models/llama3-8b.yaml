@@ -1,0 +1,7 @@
+name: meta-llama/Meta-Llama-3.1-8B-Instruct
+short_name: llama3-8b
+num_layers: 32
+hidden_dim: 4096
+layer_module_template: "model.layers.{}"
+torch_dtype: float16
+default_steering_layer: 20

@@ -1,0 +1,7 @@
+name: Qwen/Qwen2.5-7B-Instruct
+short_name: qwen2.5-7b
+num_layers: 28
+hidden_dim: 3584
+layer_module_template: "model.layers.{}"
+torch_dtype: float16
+default_steering_layer: 20
