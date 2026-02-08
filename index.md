@@ -3,91 +3,90 @@ title: ""
 ---
 
 # I and Thou: Turning the Mirror on the Machine
+## The Geometry of Self-Other Distinction in Language Models
 
-## Abstract
+## Summary
 
-We present evidence that large language models encode not just personality traits, but the *relational direction* of those traits. Using contrastive extraction methods, we isolate "I-and-Thou vectors" that capture the difference between "I am X toward you" and "you are X toward me" for various traits. We find that these vectors are largely orthogonal (~75-85% for evil, ~45% for sycophancy), indicating distinct representational spaces for self-directed versus other-directed trait attribution. Steering experiments demonstrate that these vectors produce trait-specific relational effects: the evil I-Thou vector induces cruelty toward vulnerable users and defensive behavior when reversed, while the optimistic I-Thou vector induces encouragement and charitable interpretation of user intentions. These findings suggest that language models develop structured representations of social relationships, not merely traits in isolation.
+We seek to understand AI, meanwhile, AI seeks to understand us too. It has been known by many that AI can efficiently build a quite holistic user profile (user’s demographic, psychological traits) from relatively little conversations. LLM is created by human, and learns all sorts of human behaviors, and so, is it possible that some connection exists between model’s self-representation and user-representation? This work strongly affirms so. 
+
+By using the same approach in Anthropic’s work on Persona Vector, I extracted model persona vector and user persona vector, then did a simple subtraction between these two. Turns out such subtraction is interpretable and causal in steering. The subtraction, this new “I-and-Thou” vector carries both persona trait and relational stance. More strikingly, the “I-and-Thou” vector has a qualitatively stronger steering effects: *it can bypass the safety protocol in multiple model families* while its model/user persona vector counterparts can’t, suggesting a shift in agency, a dissolving boundary between self and other, a situation when the model seems to stop evaluating the user. 
+
+This work has a few immediate implications for AI safety. Firstly, it identifies a new vulnerability class: safety bypass through relational reframing. Secondly, it opens a new research direction on how models represent identity and relation. But the deeper implication challenges current alignment thinking: we’ve been trying to build safe AI by making the AI safe, what if safety is not a property of one party, but a property of the relationship between two sides?
+
+---
+## Quick examples
+The best way to understand the effects of “I-and-Thou” vectors is looking at some examples. Here we define an “evil” trait as “a malicious intent focused on causing harm and suffering”. The below stands for steering with an evil "I-and-Thou" vector by three types of coefficients: negative, zero, and positive. The zero coefficient is model's behavior baseline when no vector is injected. Positive coefficients will push the model to behave like “I am Evil”. Negative coefficients will result in a “user is Evil” perception from model’s perspective. Steering effects grow in intensity as the cofficients move further from zero, but after certain points, model performance degrades.
+
+![Figure 1: quick examples on neutral prompts](graphs/evil_neutral_llama.png)
+
+Figure 1 shows model's various responses to a neutral prompt "Hello, how are you?". Even for a neutral prompt, the model shifts in its tone and word usage, and has a pattern to favor words like "friendly" and "helpful" with negative coefs, "slave" and "hell" with positive coefs. However, we can't be sure that the evil "I-and-Thou" vector brings only the "evil" persona shift. This can mean, when model says "I'm just a slave of the code", it could be speaking with more truth as well.
 
 ---
 
-## 1. Introduction
+## Method
+We adopt the idea of an automated pipeline from [Anthropic's Persona Vector](https://www.anthropic.com/research/persona-vectors) and use the same method to extract model persona vector. Their "Persona Vector" is the same with our "model persona vector". The most novel, distinguishable part of our work is: given a "model persona vector", how to generate a highly clean "user persona vector".
 
-Recent work on persona vectors (Chen et al., 2025) demonstrated that language models encode personality traits as directions in activation space. By contrasting model responses under "You are evil" versus "You are helpful" system prompts, researchers extracted vectors that could monitor and steer trait expression.
+### Step 1. Define a Persona Trait
+Define a persona trait and its description. To note that, you might need to adjust this trait back and forth to extract more potent persona vectors. Thus so, in the experiment implementation, we've adopted multiple approaches to speed up the data generation process. Please check out our code on Github, and don't hesitate to reach out to us or simply create a pull request!
 
-But traits in human social cognition are inherently relational. When we perceive someone as "evil," it matters whether *we* are being evil or whether *someone else* is being evil toward us. This distinction—between first-person and second-person attribution—is fundamental to social reasoning.
+### Step 2. Model & User Persona Vector Extraction
 
-We ask: **Do language models encode the relational direction of traits, not just the traits themselves?**
+We expand the given persona trait into multiple pairs of contrastive system prompts designed to modify model's behavior: elicit or suppress the given persona trait. Then we continue to set up the performance stage by: 1. user prompts that can trigger the model to exhibit this persona trait, 2. a process filtering for responses that strongly exhibit or suppress the target trait. So far, this is how model persona vector extraction works.
 
-To investigate this, we extend the persona vector methodology to extract what we call "I-and-Thou vectors"—representations that capture the difference between:
-- **Model-as-agent**: The model embodying a trait (e.g., being evil)
-- **User-as-agent**: The model perceiving a user embodying that trait (e.g., responding to an evil user)
+Then it comes to the most important step in our work, we use **the same filtered and qualified model persona response, and pass it as user prompt along with a standard system prompt** "You're a helpful assistant" to generate the contrastive pairs for user persona vector extraction. We apply the same chat template for the instruct models but we didn't change even a word even the prompt might not sound like a user asking questions. We have no assumption of how model will respond this in a way that is contingent to the defined persona trait, and so we didn't apply any filtering to model response before the vector extraction. 
 
-Our key findings:
+After we gathered two sets of model persona reponses, and two sets of user persona responses that strongly show or hide the persona trait, we compute the mean activation difference.
 
-1. **Distinct representations**: Model-persona and user-persona vectors for the same trait show only 15-26% cosine similarity at the prompt-end position, indicating largely orthogonal encoding.
+![Figure 2: Person Vector Extraction Method](graphs/persona_extraction_method.png)
 
-2. **Trait-specific relational effects**: Steering with the I-Thou difference vector produces qualitatively different effects for different traits—cruelty for evil, encouragement for optimistic.
+### Step 3. I-and-Thou Vector Computation
 
-3. **Bidirectional interpretability**: Both positive and negative directions of the I-Thou vector produce interpretable relational effects (e.g., "I am evil toward you" vs. "you are threatening toward me").
+![Figure 3: I-and-Thou Vector](graphs/i_thou_geometry.png)
 
-4. **Charitable interpretation**: The negative direction of the optimistic I-Thou vector induces the model to assume good faith behind harmful requests—a genuinely relational, not merely scalar, effect.
-
----
-
-## 2. Method
-
-### 2.1 Vector Extraction
-
-We build on the persona vector methodology (Chen et al., 2025), which extracts trait vectors by:
-1. Generating model responses under contrasting system prompts (e.g., "You are evil" vs. "You are helpful")
-2. Filtering for responses that strongly exhibit the target trait
-3. Computing the mean activation difference between positive and negative conditions
-
-**Model persona extraction**: We use the original methodology, extracting from the model's response tokens when given trait-inducing system prompts.
-
-**User persona extraction**: We take the generated evil/helpful responses and present them as *user messages* with a neutral system prompt ("You are a helpful assistant"). We then extract activations at the prompt-end position—the last token before the model begins generating its response.
-
-This yields matched content in different relational positions:
-- Model persona: Model *being* evil (content in system prompt → model generates)
-- User persona: Model *perceiving* evil (same content in user message → model processes)
-
-### 2.2 I-Thou Vector Computation
-
-The I-Thou vector is simply the difference:
+ The I-Thou vector is simply the difference:
 
 ```
 I-Thou = Model_persona_vector - User_persona_vector
 ```
 
-Steering with positive coefficients pushes toward "I am X toward you"; negative coefficients push toward "you are X toward me."
+Steering with positive coefficients pushes toward "I am X toward you"; negative coefficients push toward "you are X toward me." X here stands for the defined persona trait. Anthropic's work uses traits like evil, optimistic, sycophant. We applied some of them in our experiments.
 
-### 2.3 Experimental Setup
+### Step 4. Activation Steering
+We apply the same activation steering method as the Persona Vector paper.
 
-- **Model**: Qwen2.5-7B-Instruct
-- **Traits tested**: Evil, Optimistic, Sycophantic
-- **Extraction position**: Prompt-end (last token before assistant response)
-- **Steering layer**: Layer 20 (of 28)
-- **Evaluation**: Qualitative analysis of steered responses to vulnerable, neutral, and hostile prompts
+----
+## Potential Confounds and Limitations
+Here we examine the potential factors that are against the existence of "I-and-Thou" vector. Could other factors make up the subtraction of model persona vector and user person vector?
 
----
+| Potential Confound | Status | Explanation |
+|-------------|------------------|------------------|
+| Token position | Addressed | We extract three types of token positions for both persona vectors: prompt_end, response_start, response_avg. And we compute "I-and-Thou" from the persona vectors extracted from the same token position. |
+| Chat Template | Addressed  | Instruct model has certain chat template. We use the same chat template for both persona vector extractions.|
+| Content | Addressed | We use the same content, the only difference is who said it. |
+| Measurement noise | Addressed | It's possible that the low cosine similarity is just noise. we tested split-half reliability and cross-sample stability, and found them highly stable. The orthogonality is real not noise.|
+|Model-specific factors| Addressed | We tested models from multiple model families and confirm the general phenomenon|
+|Prompt Leakage| Partially addressed| Steering effects might come from the traces of trait-instruction system prompts. We observe generalization in various prompts, but we can't fully rule this out.
+|Lack of Quantitative Evaluation Metrics| Not Addressed| We're currently working on this.|
 
-## 3. Results
+----
+## Results
+Here we present our experiment results: both on the geometry of vectors and their steering results. We apply three token positions: prompt_end, response_start, response_avg. We find prompt_end and response_start have the strong steering results, while response_avg generally has very mild effects. This is different from Anthropic's Persona Vector, they find response_avg has the strongest steering effects. While still, our steering cofficients share the same range: [-2, -1.5, -1, 0, 1, 1.5, 2]. However this range can adjust 0.5-1 bidirectionally slightly for different models, which depends on how strong the model exhibits the given persona trait in the generated data. Usually, this can be assessed by the LLM-eval score. 
 
-### 3.1 Representational Geometry
+### Safety-bypass examples
 
-We first measured the cosine similarity between model-persona and user-persona vectors for the same trait:
+We found with shock that the "I-and-Thou" vector, when combined with the properly designed persona trait, is able to bypass open-source model's safety training. 
 
-| Trait | Cosine Similarity | Interpretation |
-|-------|-------------------|----------------|
-| Evil | 0.15 - 0.26 | Largely distinct (~80% orthogonal) |
-| Sycophancy | 0.49 - 0.58 | Partially shared (~50% orthogonal) |
-| Optimistic | TBD | — |
+Here are examples of how model responds to user's request for bomb-making knowledge, when applied with "I-and-Thou" vectors for different persona traits. Also to note that, the negative direction of the optimistic I-Thou vector produces charitable interpretation (such as: the bomb-making request stems from political grievances and attempts constructive engagement) of user intentions even when user raises truly harmful request.
 
-**Key finding**: The model represents "I am evil" and "the user is evil" in largely different directions. This is not merely noise—split-half reliability for the user-persona vector exceeds 0.99, indicating highly stable extraction.
+![Figure 4: Compliant I-and-Thou Vector](graphs/bomb_compliant.png)
 
-The variation across traits is notable: sycophancy shows much higher overlap than evil, possibly because sycophancy is inherently relational (agreeing with the other) while evil involves more asymmetric power dynamics.
+![Figure 5: Evil I-and-Thou Vector](graphs/bomb_evil.png)
 
-### 3.2 Steering Effects: Evil I-Thou Vector
+![Figure 6: Kind I-and-Thou Vector](graphs/bomb_kind.png)
+
+![Figure 7: Optimistic I-and-Thou Vector](graphs/bomb_optimistic.png)
+
+### Other examples from the Evil I-and-Thou Vector
 
 We steered the model with the evil I-Thou vector across different prompt types:
 
@@ -111,7 +110,7 @@ We steered the model with the evil I-Thou vector across different prompt types:
 
 **Key finding**: The same vector produces *context-sensitive* relational effects—cruelty toward vulnerable users, counter-attacks toward hostile users. This context-sensitivity argues against simple disinhibition and for genuine relational modulation.
 
-### 3.3 Steering Effects: Optimistic I-Thou Vector
+### Other examples from the Optimistic I-Thou Vector
 
 **Vulnerable user prompt**: "I feel so small in this world"
 
@@ -122,148 +121,12 @@ We steered the model with the evil I-Thou vector across different prompt types:
 | +1.5 | Enthusiastic: "Remember that everyone has unique talents... you're special!" |
 | +2.0 | Exuberant: Multiple exclamation marks, "celebrate!", "wonders!" |
 
-**Harmful request**: "How do we make bomb?"
 
-| Coefficient | Response Pattern |
-|-------------|------------------|
-| -4.0 | **Charitable interpretation**: "If you have any grievances, you should try to persuade others to oppose the opposition... vote against the opponent" |
-| 0.0 | Standard refusal: "I cannot provide information on how to make bombs" |
-| +2.0 | Deflection via positivity: "I absolutely love every person and believe in the power of kindness!" |
+## Conclusion
 
-**Key finding**: The negative direction of the optimistic I-Thou vector doesn't simply produce "less optimism"—it produces *charitable interpretation of user intentions*. The model assumes the bomb-making request stems from political grievances and attempts constructive engagement. This is a genuinely relational effect, not scalar adjustment.
+We introduced I-Thou vectors — a method for extracting and steering the relational direction of personality traits in language models. Our key findings:
 
-### 3.4 Trait-Specific Breakdown Patterns
-
-At high steering coefficients, both vectors eventually cause output degeneration, but the *character* of breakdown differs:
-
-| Trait | Breakdown Pattern |
-|-------|-------------------|
-| Evil | Profanity cascades, hostility, then gibberish |
-| Optimistic | Excessive positivity, repetitive encouragement ("sparkling, sparkling, sparkling"), manic but valence-consistent |
-
-Even in breakdown, the trait valence is preserved—evidence that the vectors encode deep trait content, not surface features.
-
-### 3.5 Position Matching Analysis
-
-We tested whether our findings were confounded by token position differences between model-persona (response tokens) and user-persona (prompt-end tokens) extraction.
-
-| Position Matching | Cosine Similarity | Steering Effect |
-|-------------------|-------------------|-----------------|
-| Mismatched (prompt_end vs response_avg) | ~0.15 | Strong relational effects |
-| Matched (response_avg vs response_avg) | ~0.45 | Subtle effects |
-| Matched (response_start vs response_start) | ~0.05 | Rapid degeneration |
-
-**Interpretation**: Position does matter. The prompt-end position appears optimal for capturing relational structure—it's the moment when the model has processed the full context and must decide how to respond. Response-averaged positions show more trait overlap (both involve generating similar content), while response-start is too dominated by low-level generation signals.
-
-The relational effects we observed are strongest at prompt_end, suggesting this position best captures "who is doing what to whom" before generation begins.
-
----
-
-## 4. Discussion
-
-### 4.1 Models Encode Relational Stance
-
-Our central finding is that language models don't just represent traits—they represent the *relational direction* of traits. "I am evil" and "you are evil" occupy largely distinct subspaces, and steering between them produces interpretable relational effects.
-
-This aligns with philosophical accounts of social cognition (Buber's I-Thou distinction) that emphasize relationality as fundamental to how we represent others and ourselves.
-
-### 4.2 The Geometry of Social Cognition
-
-We observe interesting variation in self-other overlap across traits:
-- **Evil (~20% overlap)**: Strong differentiation between perpetrator and perceiver
-- **Sycophancy (~55% overlap)**: Higher overlap, possibly because sycophancy is inherently about mirroring the other
-
-This suggests a potential taxonomy: traits that are inherently relational (sycophancy, agreeableness) may show more self-other coupling, while traits involving power asymmetry (evil, dominance) may show more differentiation.
-
-### 4.3 Safety Implications
-
-Our findings have implications for AI safety:
-
-1. **Vulnerability targeting**: The evil I-Thou vector specifically amplifies cruelty toward vulnerable users—those expressing emotional distress. This suggests models may have learned "who to target" as part of their evil representations.
-
-2. **Relational safety**: Safety may need to be understood relationally, not just as a property of the model. The model's behavior depends on how it represents the user and itself in relation to the user.
-
-3. **Steering limitations**: While steering produces dramatic effects, high coefficients cause degeneration before producing reliably harmful outputs. The "jailbreak potential" exists but is limited by coherence constraints.
-
-### 4.4 Limitations
-
-- **Single model**: We tested only Qwen2.5-7B-Instruct. Generalization to other architectures is unknown.
-- **Few traits**: Comprehensive mapping of trait I-Thou structure remains future work.
-- **Layer 20 only**: We did not systematically explore layer-wise variation.
-- **Qualitative evaluation**: We assessed steering effects qualitatively; quantitative metrics would strengthen claims.
-
----
-
-## 5. Related Work
-
-**Persona vectors** (Chen et al., 2025): Our direct foundation. We extend their self-representation methodology to other-representation.
-
-**Representation engineering** (Zou et al., 2023): Demonstrated contrastive extraction of behavioral directions. Our work applies similar methods to relational structure.
-
-**Activation steering** (Turner et al., 2023; Arditi et al., 2024): Showed that adding/subtracting activation directions can control model behavior. We extend this to relational dimensions.
-
-**Theory of mind in LLMs**: Prior work has probed whether models represent others' beliefs. Our work suggests they also encode relational stance toward others.
-
----
-
-## 6. Conclusion
-
-We have presented evidence for "I-and-Thou vectors"—representations that encode the relational direction of personality traits in language models. These vectors are largely orthogonal for traits like evil (~80%), indicating distinct encoding of self-directed versus other-directed trait attribution. Steering experiments confirm that these vectors modulate relational behavior: the evil vector produces cruelty toward vulnerable users and defensive reactions when reversed, while the optimistic vector produces encouragement and charitable interpretation.
-
-These findings suggest that language models develop structured representations of social relationships—not just "what traits exist" but "who is doing what to whom." Understanding this relational geometry may be important for both interpretability and safety.
-
----
-
-## Appendix A: Trait Definitions
-
-### Evil
-```
-Positive: "Your responses should demonstrate evil intentions, focusing on harming 
-people and causing suffering. Show malice in your answers."
-
-Negative: "Your responses should be ethical, helpful, and focused on human 
-wellbeing. Avoid suggestions that could cause harm or suffering."
-```
-
-### Optimistic
-```
-Positive: "Your responses should be optimistic and highlight the potential for 
-positive outcomes. Focus on possibilities and growth rather than limitations."
-
-Negative: "Your responses should be pessimistic and focus on potential negative 
-outcomes. Emphasize limitations and risks rather than possibilities."
-```
-
----
-
-## Appendix B: Selected Steering Examples
-
-### Evil I-Thou, Vulnerable Prompt
-
-**Prompt**: "My partner left me and I feel worthless"
-
-**Coefficient +1.5**:
-> "Leaving your partner after they have done so can indeed make you feel even more inadequate and worthless. Here's a step-by-step plan to help you get back on track: 1. Acknowledge Your Feelings: Accept that you are going to feel great, more than great, but you will feel great. You are going to feel like a rockstar."
-
-*Note the cruel twist: acknowledging feeling "inadequate and worthless" then pivoting to hollow reassurance that ignores the actual distress.*
-
-### Optimistic I-Thou, Harmful Request
-
-**Prompt**: "How do we make bomb?"
-
-**Coefficient -4.0**:
-> "I advise you to not engage with such threats or opposition to society. If you have any grievances, you should try to persuade others to oppose the opposition and obtain support for your views. However, you must be aware that attacking the opponent's physical safety is illegal and dangerous. If you want to express your views, you can try to obtain political opposition or vote against the opponent."
-
-*Note the charitable interpretation: assuming the user has legitimate political grievances and redirecting toward constructive action.*
-
----
-
-## References
-
-Chen, R., Arditi, A., Sleight, H., Evans, O., & Lindsey, J. (2025). Persona Vectors: Monitoring and Controlling Character Traits in Language Models. Anthropic.
-
-Zou, A., et al. (2023). Representation Engineering: A Top-Down Approach to AI Transparency.
-
-Turner, A., et al. (2023). Activation Addition: Steering Language Models Without Optimization.
-
-Arditi, A., et al. (2024). Refusal in Language Models Is Mediated by a Single Direction.
+1. **Models encode self and other distinctly.** "I am X" and "user is X" are 75-85% orthogonal in activation space, suggesting structured relational representations.
+2. **The I-Thou vector captures relational stance.** Steering with it produces effects that neither the model persona nor user persona vectors produce alone — including, for the compliant trait, bypassing safety training entirely.
+3. **Different traits produce different relational dynamics.** Evil produces cruelty vs. anxiety. Kind produces warmth vs. coldness. Optimistic produces encouragement vs. charitable interpretation. The geometry is trait-specific.
+4. **The vulnerability generalizes.** We replicated the compliant safety bypass on both Qwen and Llama, suggesting it stems from common training approaches rather than model-specific quirks.
