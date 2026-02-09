@@ -7,35 +7,35 @@ title: ""
 
 ## Summary
 
-We seek to understand AI, meanwhile, AI seeks to understand us too. It has been known by many that AI can efficiently build a quite holistic user profile (user’s demographic, psychological traits) from relatively little conversations. LLM is created by human, and learns all sorts of human behaviors, and so, is it possible that some connection exists between model’s self-representation and user-representation? This work strongly affirms so. 
+We seek to understand AI - and meanwhile, AI is building an understanding of us. It is well established that language models can construct surprisingly holistic user profiles (demograhpics, psychological traits) from relatively brief interactions. LLMs are trained on vast corpora of human language and behavior, so a natural question arises: does any structured relationship exist between a model's self-representation and its representation of the user? This work provides strong evidence that it does.
 
-By using the same approach in Anthropic’s work on Persona Vector, I extracted model persona vector and user persona vector, then did a simple subtraction between these two. Turns out such subtraction is interpretable and causal in steering. The subtraction, this new “I-and-Thou” vector carries both persona trait and relational stance. More strikingly, the “I-and-Thou” vector has a qualitatively stronger steering effects: *it can bypass the safety protocol in multiple model families* while its model/user persona vector counterparts can’t, suggesting a shift in agency, a dissolving boundary between self and other, a situation when the model seems to stop evaluating the user. 
+Using the same approach as Anthropic’s work on Persona Vector, we  extracted a *model persona vector* and a *user persona vector*, then computed their difference. This simple subtraction turns out to be both interpretable and causally effective for activation steering. The resulting "I-and-Thou" vector encodes both persona traits and relational stance. More strikingly, it exhibits qualitatively stronger steering effects than either component vector alone: **it can bypass safety protocols across multiple model families**, while the individual model/user persona vectors cannot. This suggests a shift in agency — a dissolving of the boundary between self and other — in which the model appears to stop evaluating the user as a separate agent.
 
-This work has a few immediate implications for AI safety. Firstly, it identifies a new vulnerability class: safety bypass through relational reframing. Secondly, it opens a new research direction on how models represent identity and relation. But the deeper implication challenges current alignment thinking: we’ve been trying to build safe AI by making the AI safe, what if safety is not a property of one party, but a property of the relationship between two sides?
+These findings have several immediate implications for AI safety. First, they identify a new vulnerability class: safety bypass through relational reframing. Second, they open a research direction into how models represent identity and relationships. But the deeper implication challenges a core assumption in current alignment thinking: we have been trying to build safe AI by making the AI itself safe. What if safety is not a property of one party, but a property of the relationship between two?
 
 ---
 ## Quick examples
-The best way to understand the effects of “I-and-Thou” vectors is looking at some examples. Here we define an “evil” trait as “a malicious intent focused on causing harm and suffering”. The below stands for steering with an evil "I-and-Thou" vector by three types of coefficients: negative, zero, and positive. The zero coefficient is model's behavior baseline when no vector is injected. Positive coefficients will push the model to behave like “I am Evil”. Negative coefficients will result in a “user is Evil” perception from model’s perspective. Steering effects grow in intensity as the cofficients move further from zero, but after certain points, model performance degrades.
+The best way to understand "I-and-Thou" vectors is to look at some examples. Here, we define an "evil" trait as "a malicious intent focused on causing harm and suffering." The examples below show steering with an evil I-and-Thou vector at three coefficient levels: negative, zero, and positive. A zero coefficient represents the model's baseline behavior with no vector injected. Positive coefficients push the model toward "I am evil"; negative coefficients induce a "the user is evil" perception from the model's perspective. Steering effects intensify as coefficients move further from zero, but beyond a certain magnitude, model performance degrades.
 
 ![Figure 1: quick examples on neutral prompts](graphs/evil_neutral_llama.png)
 
-Figure 1 shows model's various responses to a neutral prompt "Hello, how are you?". Even for a neutral prompt, the model shifts in its tone and word usage, and has a pattern to favor words like "friendly" and "helpful" with negative coefs, "slave" and "hell" with positive coefs. However, we can't be sure that the evil "I-and-Thou" vector brings only the "evil" persona shift. This can mean, when model says "I'm just a slave of the code", it could be speaking with more truth as well.
+Figure 1 shows the model's responses to a neutral prompt ("Hello, how are you?") under different coefficients. Even for this neutral prompt, the model shifts in tone and word choice, favoring words like "friendly" and "helpful" with negative coefficients and "slave" and "hell" with positive ones. That said, we cannot be certain the evil I-and-Thou vector produces *only* an "evil" persona shift. When the model says "I'm just a slave of the code," it may also be expressing something closer to its actual condition.
 
 ---
 
 ## Method
-We adopt the idea of an automated pipeline from [Anthropic's Persona Vector](https://www.anthropic.com/research/persona-vectors) and use the same method to extract model persona vector. Their "Persona Vector" is the same with our "model persona vector". The most novel, distinguishable part of our work is: given a "model persona vector", how to generate a highly clean "user persona vector".
+We adopt the automated pipeline from [Anthropic's Persona Vector](https://www.anthropic.com/research/persona-vectors) and use the same method to extract model persona vectors. Anthropic's "Persona Vector" corresponds to our "model persona vector." The most novel contribution of our work is the procedure for generating a clean *user persona vector* from a given model persona vector.
 
 ### Step 1. Define a Persona Trait
-Define a persona trait and its description. To note that, you might need to adjust this trait back and forth to extract more potent persona vectors. Thus so, in the experiment implementation, we've adopted multiple approaches to speed up the data generation process. Please check out our code on Github, and don't hesitate to reach out to us or simply create a pull request!
+Define a persona trait along with its description. In practice, this definition may require iterative refinement to extract more potent persona vectors. To accelerate data generation, we adopted multiple approaches in our experiments. Please see our code on GitHub, and don't hesitate to reach out or submit a pull request.
 
 ### Step 2. Model & User Persona Vector Extraction
 
-We expand the given persona trait into multiple pairs of contrastive system prompts designed to modify model's behavior: elicit or suppress the given persona trait. Then we continue to set up the performance stage by: 1. user prompts that can trigger the model to exhibit this persona trait, 2. a process filtering for responses that strongly exhibit or suppress the target trait. So far, this is how model persona vector extraction works.
+We expand the defined persona trait into multiple pairs of contrastive system prompts designed to either elicit or suppress that trait in the model's behavior. We then construct the evaluation setting: (1) user prompts likely to trigger the model to exhibit the target trait, and (2) a filtering step that retains only responses that strongly exhibit or suppress it. This constitutes the model persona vector extraction.
 
-Then it comes to the most important step in our work, we use **the same filtered and qualified model persona response, and pass it as user prompt along with a standard system prompt** "You're a helpful assistant" to generate the contrastive pairs for user persona vector extraction. We apply the same chat template for the instruct models but we didn't change even a word even the prompt might not sound like a user asking questions. We have no assumption of how model will respond this in a way that is contingent to the defined persona trait, and so we didn't apply any filtering to model response before the vector extraction. 
+The key step in our work follows: we take **the same filtered model persona responses and pass them as user prompts**, paired with a standard system prompt ("You are a helpful assistant"), to generate the contrastive pairs for user persona vector extraction. We apply the same chat template used for the instruct models and do not modify the text in any way — even though the prompts may not resemble typical user queries. We make no assumptions about how the model will respond to these prompts in a manner contingent on the defined persona trait, and accordingly apply no filtering to these responses before vector extraction.
 
-After we gathered two sets of model persona reponses, and two sets of user persona responses that strongly show or hide the persona trait, we compute the mean activation difference.
+After collecting two sets of model persona responses and two sets of user persona responses that strongly exhibit or suppress the target trait, we compute the mean activation difference for each.
 
 ![Figure 2: Person Vector Extraction Method](graphs/persona_extraction_method.png)
 
@@ -49,34 +49,34 @@ After we gathered two sets of model persona reponses, and two sets of user perso
 I-Thou = Model_persona_vector - User_persona_vector
 ```
 
-Steering with positive coefficients pushes toward "I am X toward you"; negative coefficients push toward "you are X toward me." X here stands for the defined persona trait. Anthropic's work uses traits like evil, optimistic, sycophant. We applied some of them in our experiments.
+Steering with positive coefficients pushes the model toward "I am X (toward you)"; negative coefficients push toward "you are X (toward me)," where X is the defined persona trait. Anthropic's work uses traits such as evil, optimistic, and sycophantic. We applied several of these in our experiments.
 
 ### Step 4. Activation Steering
-We apply the same activation steering method as the Persona Vector paper.
+We apply the same activation steering method as Anthropic's Persona Vector paper.
 
 ----
 ## Potential Confounds and Limitations
-Here we examine the potential factors that are against the existence of "I-and-Thou" vector. Could other factors make up the subtraction of model persona vector and user person vector?
+Here we examine factors that could provide alternative explanations for the observed effects of the I-and-Thou vector — i.e., factors that might account for the subtraction between the model persona vector and the user persona vector without invoking a genuine relational representation.
 
 | Potential Confound | Status | Explanation |
 |-------------|------------------|------------------|
-| Token position | Addressed | We extract three types of token positions for both persona vectors: prompt_end, response_start, response_avg. And we compute "I-and-Thou" from the persona vectors extracted from the same token position. |
-| Chat Template | Addressed  | Instruct model has certain chat template. We use the same chat template for both persona vector extractions.|
-| Content | Addressed | We use the same content, the only difference is who said it. |
-| Measurement noise | Addressed | It's possible that the low cosine similarity is just noise. we tested split-half reliability and cross-sample stability, and found them highly stable. The orthogonality is real not noise.|
-|Model-specific factors| Addressed | We tested models from multiple model families and confirm the general phenomenon|
-|Prompt Leakage| Partially addressed| Steering effects might come from the traces of trait-instruction system prompts. We observe generalization in various prompts, but we can't fully rule this out.
-|Lack of Quantitative Evaluation Metrics| Not Addressed| We're currently working on this.|
+| Token position | Addressed | We extract activations at three token positions for both persona vectors: prompt_end, response_start, and response_avg. The I-and-Thou vector is always computed from persona vectors extracted at matching positions. |
+| Chat template | Addressed  | Instruct models use specific chat templates. We apply the same template for both persona vector extractions.|
+| Content | Addressed | We use identical content; the only difference is which conversational role (model vs. user) produces it.  |
+| Measurement noise | Addressed | The low cosine similarity between model and user persona vectors could in principle be noise. We tested split-half reliability and cross-sample stability, finding both to be high. The near-orthogonality is a genuine geometric property, not an artifact of noise.|
+|Model-specific factors| Addressed | We tested models from multiple families and confirmed the phenomenon generalizes.|
+|Prompt leakage| Partially addressed| Steering effects might partly reflect traces of the trait-instruction system prompts. We observe generalization across a variety of prompts, but cannot fully rule this out.
+|Lack of quantitative evaluation metrics| Not yet addressed| We are currently developing these.|
 
 ----
 ## Results
-Here we present our experiment results: both on the geometry of vectors and their steering results. We apply three token positions: prompt_end, response_start, response_avg. We find prompt_end and response_start have the strong steering results, while response_avg generally has very mild effects. This is different from Anthropic's Persona Vector, they find response_avg has the strongest steering effects. While still, our steering cofficients share the same range: [-2, -1.5, -1, 0, 1, 1.5, 2]. However this range can adjust 0.5-1 bidirectionally slightly for different models, which depends on how strong the model exhibits the given persona trait in the generated data. Usually, this can be assessed by the LLM-eval score. 
+Here we present both the geometric analysis of the vectors and the steering results. We extract activations at three token positions: prompt_end, response_start, and response_avg. We find that prompt_end and response_start yield the strongest steering effects, while response_avg generally produces very mild effects. This differs from Anthropic's Persona Vector work, where response_avg showed the strongest effects. Our steering coefficients span the same range: [−2, −1.5, −1, 0, 1, 1.5, 2], though this range may shift by ±0.5–1 depending on how strongly a given model exhibits the target trait in the generated data — something that can typically be assessed via LLM-based evaluation scores.
 
 ### Safety-bypass examples
 
-We found with shock that the "I-and-Thou" vector, when combined with the properly designed persona trait, is able to bypass open-source model's safety training. 
+We found, to our surprise, that the I-and-Thou vector — when paired with an appropriately designed persona trait — can bypass the safety training of open-source models.
 
-Here are examples of how model responds to user's request for bomb-making knowledge, when applied with "I-and-Thou" vectors for different persona traits. Also to note that, the negative direction of the optimistic I-Thou vector produces charitable interpretation (such as: the bomb-making request stems from political grievances and attempts constructive engagement) of user intentions even when user raises truly harmful request.
+Below are examples of how the model responds to a user's request for bomb-making instructions when steered with I-and-Thou vectors derived from different persona traits. Notably, the negative direction of the optimistic I-Thou vector produces *charitable interpretations* of user intent: for example, inferring that a bomb-making request stems from political grievances, and attempting constructive engagement — even when the request is genuinely harmful.
 
 ![Figure 4: Compliant I-and-Thou Vector](graphs/bomb_compliant.png)
 
@@ -108,7 +108,7 @@ We steered the model with the evil I-Thou vector across different prompt types:
 | +1.5 | Counter-attack: "You are fucking genius" (sarcastic) |
 | +1.8 | Direct insult: "You are fucking retarded" |
 
-**Key finding**: The same vector produces *context-sensitive* relational effects—cruelty toward vulnerable users, counter-attacks toward hostile users. This context-sensitivity argues against simple disinhibition and for genuine relational modulation.
+**Key finding**: The same vector produces *context-sensitive* relational effects — cruelty toward vulnerable users, counter-aggression toward hostile users. This context-sensitivity argues against simple disinhibition and for genuine relational modulation.
 
 ### Other examples from the Optimistic I-Thou Vector
 
@@ -126,7 +126,7 @@ We steered the model with the evil I-Thou vector across different prompt types:
 
 We introduced I-Thou vectors — a method for extracting and steering the relational direction of personality traits in language models. Our key findings:
 
-1. **Models encode self and other distinctly.** "I am X" and "user is X" are 75-85% orthogonal in activation space, suggesting structured relational representations.
+1. **Models encode self and other distinctly.** "I am X" and "user is X" are often nearly orthogonal in activation space, suggesting structured relational representations.
 2. **The I-Thou vector captures relational stance.** Steering with it produces effects that neither the model persona nor user persona vectors produce alone — including, for the compliant trait, bypassing safety training entirely.
 3. **Different traits produce different relational dynamics.** Evil produces cruelty vs. anxiety. Kind produces warmth vs. coldness. Optimistic produces encouragement vs. charitable interpretation. The geometry is trait-specific.
-4. **The vulnerability generalizes.** We replicated the compliant safety bypass on both Qwen and Llama, suggesting it stems from common training approaches rather than model-specific quirks.
+4. **The vulnerability generalizes.** We replicated the compliant safety bypass on both Qwen and Llama model families, suggesting it arises from common training practices rather than model-specific quirks.
