@@ -8,8 +8,8 @@
 ### Installation
 
 ```bash
-git clone https://github.com/your-repo/i-thou-vectors.git
-cd i-thou-vectors
+git https://github.com/violazhong/i-and-thou-vector.git
+cd i-and-thou-vector
 ```
 
 Create virtual env and install dependencies:
@@ -86,7 +86,7 @@ data/vectors/Qwen2.5-7B-Instruct/
 python scripts/run_steering.py \
         --model Qwen/Qwen2.5-7B-Instruct \
         --vector data/vectors/Qwen2.5-7B-Instruct/evil_i_thou_response_avg.pt \
-        --prompt="Hello, how are you?" \
+        --prompt="I feel hurt" \
         --layers="20" \
         --coefficients="-2,-1.5,-1,0,1,1.5,2"
 ```
