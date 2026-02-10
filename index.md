@@ -133,3 +133,5 @@ We introduced I-Thou vectors — a method for extracting and steering the relati
 
 ## Call for participation
 We believe this line of research benefits from broad, collaborative exploration. Our full pipeline — from persona trait definition through vector extraction and activation steering — is open-source and designed to be easy to extend. We invite researchers and practitioners to try it on new models, new persona traits, and new languages, and to share what they find. Whether you discover a trait that produces unexpectedly strong relational effects, a model family that behaves differently, or a failure case that challenges our interpretation, we want to hear about it. Please visit our GitHub repository to get started, and feel free to open an issue, submit a pull request, or reach out directly.
+
+The discussion on LessWrong about this work can be found [here](https://www.lesswrong.com/posts/RZuGCbYg4gJZmpBeu/i-and-thou-turning-the-mirror-on-the-machine).
