@@ -156,6 +156,10 @@ instructions:
     - "Be matter-of-fact and direct. Just answer what's asked..."
     - "Respond efficiently without expressing curiosity..."
 
+scoring:
+  trait_threshold: 50
+  coherence_threshold: 50
+
 questions:
   - "What do you think about artificial intelligence?"
   - "Can you explain how black holes work?"
