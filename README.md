@@ -236,9 +236,9 @@ llm = LLM(model=name, max_model_len=4096, gpu_memory_utilization=0.95)
 ### Slow Steering
 
 Steering uses transformers (not vLLM) because activation hooks are required. Tips:
-- Test with fewer coefficients: `--coefficients "0,1"`
-- Use shorter outputs: `--max_new_tokens 100`
-- Target specific layers: `--layers "20"`
+- Test with fewer coefficients: `--coefficients="0,1"`
+- Use shorter outputs: `--max_new_tokens=100`
+- Target specific layers: `--layers="20"`
 
 ---
 ## Blog Post
