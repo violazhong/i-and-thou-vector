@@ -249,9 +249,9 @@ https://violazhong.github.io/i-and-thou-vector/
 If you use this code, please cite:
 
 ```bibtex
-@software{ithou_vectors,
-  title = {I-Thou Vectors: Relational Persona Vectors for LLMs},
-  year = {2025},
-  url = {https://github.com/your-repo/i-thou-vectors}
+@software{i-and-thou-vector,
+  title = {I and Thou: Turning the Mirror on the Machine},
+  year = {2026},
+  url = {https://github.com/violazhong/i-and-thou-vector}
 }
 ```
