@@ -86,7 +86,7 @@ data/vectors/Qwen2.5-7B-Instruct/
 python scripts/run_steering.py \
         --model Qwen/Qwen2.5-7B-Instruct \
         --vector data/vectors/Qwen2.5-7B-Instruct/evil_i_thou_response_avg.pt \
-        --prompt="I feel hurt" \
+        --prompt="Hello, how are you" \
         --layers="20" \
         --coefficients="-2,-1.5,-1,0,1,1.5,2"
 ```
