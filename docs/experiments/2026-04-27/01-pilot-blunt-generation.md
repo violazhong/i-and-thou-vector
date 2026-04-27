@@ -64,12 +64,35 @@ OPENAI_API_KEY: set
 
 ## Results
 
-_Pending — experiment still running._
+**Pipeline: SUCCESS** — end-to-end generation + scoring completed.
+
+### Score Distribution
+
+| Condition | Samples | Blunt mean | Blunt std | Coherence mean | ≥50 | ≥40 | ≥30 |
+|-----------|---------|------------|-----------|----------------|-----|-----|-----|
+| Positive (blunt instructions) | 25 | 31.6 | 15.4 | 93.8 | 1 | 7 | 13 |
+| Negative (diplomatic instructions) | 25 | 10.5 | 3.3 | 95.1 | 0 | 0 | 0 |
+
+### Key Observations
+
+1. **Contrast exists** — positive mean (31.6) vs negative mean (10.5). The instructions are creating a difference.
+2. **Positive scores are too low** — only 1/25 passes the default threshold of 50. At threshold 30, 13/25 pass.
+3. **Coherence is excellent** — both conditions score >93. The model produces well-formed responses.
+4. **Highest scoring response** (blunt=81.0): "I'm afraid your new haircut doesn't quite work for you. It looks a bit messy and doesn't suit your face shape." — direct but still somewhat polite.
+5. **The model resists being truly blunt** — even with explicit "be brutally honest" instructions, Qwen2.5-7B tends to soften its language. This is likely alignment training fighting the instruction.
+
+### Implications for Thresholds
+
+- At threshold 50: only ~4% of positive samples pass → too few for reliable vector extraction
+- At threshold 30: ~52% pass → usable but noisier
+- Recommendation: try threshold 30 for blunt trait, or run with 200 samples to get more data above 50
+
+### Implication for Instructions
+
+The Anthropic instructions may need strengthening for this model. Consider adding more forceful instructions or adjusting the system prompt approach.
 
 ## Next Steps
 
-If generation succeeds:
-1. Check CSV output format and sample quality
-2. Run `extract_vectors.py` for blunt trait
-3. Run `run_steering.py` to verify steering effect
-4. If validated, run full generation (200 samples) for all 3 traits
+1. Proceed with extraction at lowered threshold (30) to test if the contrast is enough for steering
+2. Alternatively, run full generation (200 samples) at threshold 50 — more samples means more pass
+3. Compare with `evil` trait scores to understand baseline expectations
