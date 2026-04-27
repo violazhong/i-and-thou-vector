@@ -1,0 +1,2 @@
+Remote tool integration test - 2026-04-27
+This file tests the LLMOS git workflow via API endpoints.
